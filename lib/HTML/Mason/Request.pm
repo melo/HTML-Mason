@@ -249,6 +249,11 @@ sub _initialize {
             search: {
                 $request_comp = $self->interp->load($path);
 
+                ## FIXME: index.html should be a configuration parameter
+                unless ($request_comp) {
+                    $request_comp = $self->interp->load("$path/index.html");
+                }
+
                 last search unless $self->use_dhandlers;
 
                 # If path was not found, check for dhandler.
