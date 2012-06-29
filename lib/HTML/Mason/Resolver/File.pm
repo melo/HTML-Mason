@@ -17,6 +17,7 @@ use Params::Validate qw(:all);
 use HTML::Mason::ComponentSource;
 use HTML::Mason::Resolver;
 use base qw(HTML::Mason::Resolver);
+use Log::Any qw($log);
 
 use HTML::Mason::Exceptions (abbr => ['param_error']);
 
@@ -31,6 +32,7 @@ sub get_info {
     # changes.
     my $srcfile = File::Spec->canonpath( File::Spec->catfile( $comp_root_path, $path ) );
     return unless -f $srcfile;
+    $log->trace("found comp_path '$path' on '$srcfile'");
     my $modified = (stat _)[9];
     my $base = $comp_root_key eq 'MAIN' ? '' : "/$comp_root_key";
     $comp_root_key = undef if $comp_root_key eq 'MAIN';
@@ -85,13 +87,18 @@ sub apache_request_to_comp_path {
     # bug #356).
     $file = File::Spec->canonpath($file);
 
+    $log->debug("convert file '$file' to comp_path");
     foreach my $root (map $_->[1], @comp_root_array) {
         if (paths_eq($root, substr($file, 0, length($root)))) {
             my $path = substr($file, length $root);
             $path = length $path ? join '/', File::Spec->splitdir($path) : '/';
             chop $path if $path ne '/' && substr($path, -1) eq '/';
 
+            $log->trace("use comp_path '$path' for '$file' using $root");
             return $path;
+        }
+        else {
+          $log->trace("file $file is not inside $root");
         }
     }
     return undef;

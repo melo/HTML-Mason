@@ -251,6 +251,7 @@ sub _initialize {
 
                 ## FIXME: index.html should be a configuration parameter
                 unless ($request_comp) {
+                    $log->trace("Failed to load component for '$path', try with index.html");
                     $request_comp = $self->interp->load("$path/index.html");
                 }
 
@@ -258,6 +259,7 @@ sub _initialize {
 
                 # If path was not found, check for dhandler.
                 unless ($request_comp) {
+                    $log->trace("Still not found, try dhandlers");
                     if ( $request_comp = $self->interp->find_comp_upwards($path, $self->dhandler_name) ) {
                         my $parent_path = $request_comp->dir_path;
                         ($self->{dhandler_arg} = $self->{top_path}) =~ s{^$parent_path/?}{};

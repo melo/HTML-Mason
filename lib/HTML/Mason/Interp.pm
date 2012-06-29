@@ -18,6 +18,7 @@ use HTML::Mason::Escapes;
 use HTML::Mason::Request;
 use HTML::Mason::Resolver::File;
 use HTML::Mason::Tools qw(read_file taint_is_on load_pkg);
+use Log::Any qw($log);
 
 use HTML::Mason::Exceptions( abbr => [qw(param_error system_error wrong_compiler_error compilation_error error)] );
 
@@ -377,11 +378,15 @@ sub load {
     my $source = $self->resolve_comp_path_to_source($path);
 
     # No component matches this path.
-    return unless defined $source;
+    unless (defined $source) {
+        $log->debug("Failed to load comp '$path', no source found");
+        return;
+    }
 
     # comp_id is the unique name for the component, used for cache key
     # and object file name.
     my $comp_id = $source->comp_id;
+    $log->debug("loading component '$path', comp_id '$comp_id'");
 
     #
     # Get last modified time of source.
@@ -396,6 +401,7 @@ sub load {
     if ( exists $code_cache->{$comp_id} &&
          ( $self->static_source || $code_cache->{$comp_id}->{lastmod} >= $srcmod )
        ) {
+        $log->debug("Found comp_id inside our code_cache, returning");
         return $code_cache->{$comp_id}->{comp};
     }
 
@@ -418,6 +424,7 @@ sub load {
             # must create it.
             $objfilemod = @stat ? $stat[9] : 0;
         }
+        $log->debug("using object file '$objfile' mod $objfilemod ts");
     }
 
     my $comp;
@@ -435,18 +442,25 @@ sub load {
         # the second time - RT #39803).
         #
         if ($objfilemod < $srcmod) {
+            $log->debug("For comp_path '$path', src has changed: $objfilemod < $srcmod - recompile");
             $self->compiler->compile_to_file( file => $objfile, source => $source);
         }
         $comp = eval { $self->eval_object_code( object_file => $objfile ) };
+        my $exception = $@;
 
         if (!UNIVERSAL::isa($comp, 'HTML::Mason::Component')) {
-            if (!defined($@) || $@ !~ /failed in require/) {
+            $log->warn("Failed to eval object code for comp '$path': $objfile => $exception") if $exception;
+            if (!defined($exception) || $exception !~ /failed in require/) {
+                $log->debug("Try to recompile '$path' into $objfile");
                 $self->compiler->compile_to_file( file => $objfile, source => $source);
                 $comp = eval { $self->eval_object_code( object_file => $objfile ) };
+                $exception = $@;
+                $log->warn("Failed to eval object code for comp '$path': $objfile => $exception") if $exception;
             }
 
             if (!UNIVERSAL::isa($comp, 'HTML::Mason::Component')) {
-                my $error = $@ ? $@ : "Could not get HTML::Mason::Component object from object file '$objfile'";
+                my $error = $exception ? $exception : "Could not get HTML::Mason::Component object from object file '$objfile'";
+                $log->debug("Still no joy compiling comp_path '$path', give up with compilation error");
                 $self->_compilation_error( $source->friendly_name, $error );
             }
         }
@@ -456,8 +470,12 @@ sub load {
         #
         my $object_code = $source->object_code( compiler => $self->compiler );
         $comp = eval { $self->eval_object_code( object_code => $object_code ) };
-        $self->_compilation_error( $source->friendly_name, $@ ) if $@;
+        if (my $exception = $@) {
+            $log->warn("Failed to eval object code for comp '$path': $exception");
+            $self->_compilation_error( $source->friendly_name, $exception );
+        }
     }
+    $log->debug("Got comp $comp for comp_path '$path'");
     $comp->assign_runtime_properties($self, $source);
 
     #
@@ -718,9 +736,9 @@ sub _assign_comp_root
 sub resolve_comp_path_to_source
 {
     my ($self, $path) = @_;
-    
     my $source;
     if ($self->{static_source}) {
+        $log->debug("static_source is on, resolve comp_path '$path' via in-memory cache");
         # Maintain a separate source_cache for each component root,
         # because the set of active component roots can change
         # from request to request.
@@ -735,11 +753,15 @@ sub resolve_comp_path_to_source
             last if $source = $source_cache_for_root->{$path};
         }
     } else {
+        $log->debug("resolve comp_path '$path' to a source");
         my $resolver = $self->{resolver};
         foreach my $pair ($self->comp_root_array) {
+            $log->trace("check comp_path '$path' in root $pair->[1]");
             last if $source = $resolver->get_info($path, @$pair);
         }
     }
+
+    $log->debug($source? "Found source for comp_path '$path'" : "No source found for comp '$path'");
     return $source;
 }
 
