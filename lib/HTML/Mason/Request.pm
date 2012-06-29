@@ -679,6 +679,9 @@ sub cache
         if (!exists($options{namespace})) {
             $options{namespace} = $self->current_comp->comp_id;
         }
+        if (my $np = delete $options{namespace_prefix}) {
+            $options{namespace} = $np.$options{namespace};
+        }
         if (!exists($options{driver}) && !exists($options{driver_class})) {
             $options{driver} = $self->interp->cache_dir ? 'File' : 'Memory';
             $options{global} = 1 if $options{driver} eq 'Memory';            
