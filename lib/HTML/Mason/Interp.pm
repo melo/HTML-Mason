@@ -40,7 +40,7 @@ BEGIN
          buffer_preallocate_size =>
          { parse => 'string', default => 0, type => SCALAR,
            descr => "Number of bytes to preallocate in request buffer" },
-         
+
          code_cache_max_size =>
          { parse => 'string',  default => 'unlimited', type => SCALAR,
            descr => "The maximum number of components in the code cache" },
@@ -89,7 +89,7 @@ BEGIN
            descr => "When true, we only compile source files once" },
 
          static_source_touch_file =>
-         { parse => 'string', optional => 1, type => SCALAR, 
+         { parse => 'string', optional => 1, type => SCALAR,
            descr => "A file that, when touched, causes Mason to clear its component caches" },
 
          use_object_files =>
@@ -680,7 +680,7 @@ sub set_global
 sub comp_root
 {
     my $self = shift;
-    
+
     if (my $new_comp_root = shift) {
         die "cannot assign new comp_root unless dynamic_comp_root parameter is set"
           unless $self->dynamic_comp_root;
@@ -720,7 +720,7 @@ sub _assign_comp_root
         $pair->[1] = File::Spec->canonpath( $pair->[1] );
         param_error "comp_root path '$pair->[1]' is not an absolute directory"
           unless File::Spec->file_name_is_absolute( $pair->[1] );
-            
+
         my ($key, $path) = @$pair;
         if (my $orig_path = $comp_root_key_map->{$key}) {
             if ($path ne $orig_path) {
@@ -835,7 +835,7 @@ sub eval_object_code
                 sub { $warnstr .= $_[0] if $_[0] !~ /$ignore_expr/ }
               ) :
               sub { $warnstr .= $_[0] } );
-        
+
         $comp = $self->_do_or_eval(\%p);
     }
 
@@ -1394,7 +1394,7 @@ This method compiles Mason component source code and returns a
 Component object.  The source may be passed in as a string in C<comp_source>,
 or as a filename in C<comp_file>.  When using C<comp_file>, the
 filename is specified as a path on the file system, not as a path
-relative to Mason's component root (see 
+relative to Mason's component root (see
 L<$m-E<gt>fetch_comp|HTML::Mason::Request/item_fetch_comp> for that).
 
 If Mason encounters an error during processing, an exception will be thrown.
