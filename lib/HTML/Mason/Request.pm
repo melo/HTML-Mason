@@ -840,7 +840,11 @@ sub cache_self {
         }
         $expires_in = delete $options{expires_in} || delete $options{expire_in} || 'never';
         $key = delete $options{key} || '__mason_cache_self__';
+        my $refresh = delete $options{refresh};
+
         $cache = $self->cache(%options);
+
+        $cache->remove($key) if $refresh;
     }
 
     my ($output, @retval, $error);
