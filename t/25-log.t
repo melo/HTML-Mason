@@ -9,17 +9,17 @@ use File::Path;
 use HTML::Mason::Interp;
 
 sub write_file {
-    my ( $file, $content ) = @_;
-    open( my $fh, ">$file" );
-    $fh->print($content);
+  my ($file, $content) = @_;
+  open(my $fh, ">$file");
+  $fh->print($content);
 }
 
-my $comp_root = tempdir( 'mason-log-t-XXXX', TMPDIR => 1, CLEANUP => 1 );
-mkpath( "$comp_root/bar", 0, 0775 );
+my $comp_root = tempdir('mason-log-t-XXXX', TMPDIR => 1, CLEANUP => 1);
+mkpath("$comp_root/bar", 0, 0775);
 
-my $interp = HTML::Mason::Interp->new( comp_root => $comp_root );
-write_file( "$comp_root/foo", "% \$m->log->debug('in foo');\n<& /bar/baz &>" );
-write_file( "$comp_root/bar/baz", "% \$m->log->error('in bar/baz')" );
+my $interp = HTML::Mason::Interp->new(comp_root => $comp_root);
+write_file("$comp_root/foo",     "% \$m->log->debug('in foo');\n<& /bar/baz &>");
+write_file("$comp_root/bar/baz", "% \$m->log->error('in bar/baz')");
 $interp->exec('/foo');
 
 cmp_deeply(
